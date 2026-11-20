@@ -19,7 +19,11 @@ case "$path" in
 esac
 
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
-if ! out=$(python -m pytest tests/test_leakage.py -q 2>&1); then
+# Hooks run in Claude Code's environment, not an activated venv, so a bare
+# `python` may lack pytest and report every edit as a failure.
+py=python
+[ -x .venv/bin/python ] && py=.venv/bin/python
+if ! out=$("$py" -m pytest tests/test_leakage.py -q 2>&1); then
   echo "Leakage tests failed after editing $path:" >&2
   echo "$out" | tail -20 >&2
   exit 2
