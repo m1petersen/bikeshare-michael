@@ -81,6 +81,10 @@ COLUMN_GROUPS = {
 TRAIN_END = "2011-12-31"
 VALID_END = "2012-06-30"
 
+# The feature added in Exercise 1. src.train also scores the starter models
+# without it, for the report's with/without comparison.
+EXERCISE1_FEATURE = "cnt_roll_3"
+
 # Longest lag window in src/features.py. The first LAG_WARMUP calendar days
 # have no complete history and are dropped; tests/test_contract.py uses this
 # to bound how many rows may legitimately disappear.

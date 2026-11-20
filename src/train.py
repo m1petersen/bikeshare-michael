@@ -30,7 +30,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.config import METRICS, METRICS_VALID, PROCESSED, TARGET, TRAIN_END, VALID_END
+from src.config import EXERCISE1_FEATURE, METRICS, METRICS_VALID, PROCESSED, TARGET, TRAIN_END, VALID_END
 from src.features import feature_columns
 
 
@@ -87,6 +87,11 @@ MODELS = {
 }
 
 
+# The four models in the starter; the report's eight-row table compares
+# them with and without EXERCISE1_FEATURE.
+STARTER_MODELS = ["baseline_mean", "baseline_persistence", "ridge", "hgb"]
+
+
 def temporal_split(df: pd.DataFrame):
     """Split by date, never at random. A random split on a time series
     puts tomorrow in train and today in test."""
@@ -116,15 +121,28 @@ def fit_and_score(include_test: bool = True) -> dict:
     }
     if include_test:
         results["n_test"] = len(test)
-    for name, model in MODELS.items():
-        model.fit(train[cols], train[TARGET])
-        results[name] = {
+
+    def score(model, use_cols):
+        model = clone(model).fit(train[use_cols], train[TARGET])
+        return {
             split: {
-                "r2": round(float(r2_score(part[TARGET], model.predict(part[cols]))), 4),
-                "mae": round(float(mean_absolute_error(part[TARGET], model.predict(part[cols]))), 1),
+                "r2": round(float(r2_score(part[TARGET], model.predict(part[use_cols]))), 4),
+                "mae": round(float(mean_absolute_error(part[TARGET], model.predict(part[use_cols]))), 1),
             }
             for split, part in parts
         }
+
+    for name, model in MODELS.items():
+        results[name] = score(model, cols)
+
+    # Exercise 1 comparison for the report's eight-row table: the four
+    # starter models refit without the new feature. Only these four, so the
+    # test set is not scored for any extra variant.
+    without = [c for c in cols if c != EXERCISE1_FEATURE]
+    results[f"without_{EXERCISE1_FEATURE}"] = {
+        "features": without,
+        **{name: score(MODELS[name], without) for name in STARTER_MODELS},
+    }
     return results
 
 

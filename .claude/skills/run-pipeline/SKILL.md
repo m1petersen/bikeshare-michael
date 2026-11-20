@@ -42,7 +42,10 @@ final run. A plan, a doc or a previous turn saying "final" is not enough.
    The final run must score committed code; otherwise stop and say why.
 2. Check `docs/DECISIONS.md` has no line saying the test set was already
    scored for the final results. If it has, stop: a second final run
-   would be tuning on test.
+   would be tuning on test. The one exception: a dated line, written
+   *before* the re-run, recording a re-score that only adds required
+   rows and changes no model, feature or setting. Then re-run once, and
+   check that every previously reported number is unchanged.
 3. `make all && make test`.
 4. Report all eight rows from `reports/metrics.json` (four models x valid
    and test, R^2 and MAE) exactly as written there, without rounding them
