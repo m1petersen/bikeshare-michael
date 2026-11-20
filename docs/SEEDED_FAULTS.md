@@ -135,3 +135,7 @@ FAILED tests/test_leakage.py::test_no_forbidden_features - AssertionError: fo...
 ```
 
 The S3 classification test catches it independently of the FORBIDDEN check.
+
+**Fix** (commit after the fault). Removed `+ ["casual"]`. The hook was
+silent on the edit (exit 0); `make test`: `18 passed`.
+**Turns to fix:** 2 tool calls (revert the line, verify).
