@@ -48,7 +48,5 @@ rides) from calendar, weather, and lagged-demand features.
   `hgb_log_ratio` (Exercise 4) is the fix, kept beside plain `hgb`.
 - The Bash hook (`protect_raw.sh`) matches command text, so a heredoc that
   merely quotes a write to `data/raw` is blocked. Write docs with Edit.
-- Agent here: Claude Opus 5.5 via Claude Code (Pro plan). The git-ignored
-  `.claude/settings.local.json` overrides the repo's Ollama settings.
 - 2012-10-29 (Hurricane Sandy, 22 rides) is in the test set. Expect it in
   any residual plot.

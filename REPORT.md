@@ -75,6 +75,12 @@ high, `cnt_roll_7` is high and so is the forecast. The reference column is
 a lag whose `.shift(1)` is tested, so nothing from day *d* is used.
 `tests/test_contract.py` checks that, and that the inverse is exact.
 
+This target is defensible rather than tuned. Demand grew by about 65%,
+so modelling today's ride count relative to the past week's level is a
+choice made from how the data behaves, not from the scores. It uses only
+information known before the day. And it was chosen on validation alone,
+before the test set was scored.
+
 Seven targets were compared on validation only, before the test set was
 scored:
 
