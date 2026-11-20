@@ -83,3 +83,17 @@ AssertionError: lost 34 rows; expected at most 14
 **Hook stderr:** none (exit 0). The hook runs only `tests/test_leakage.py`,
 and the row-loss test is in `tests/test_contract.py`, so the agent is not
 told at edit time; only a full `make test` shows it.
+
+**Fix** (commit after the bug). Restored `encode_weather(out.weather)`:
+`17 passed`, 714 rows. **Turns to fix:** 2 tool calls (restore, verify).
+
+The same commit closes the blind spot: the hook now runs `pytest tests/`
+(the whole suite, ~1.3 s) instead of only `tests/test_leakage.py`. Run
+against the B2 bug commit (in a temporary worktree), the hook now exits 2
+with:
+
+```
+Tests failed after editing src/features.py:
+FAILED tests/test_contract.py::test_only_expected_rows_are_dropped - Assertio...
+1 failed, 16 passed
+```

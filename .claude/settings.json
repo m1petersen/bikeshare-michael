@@ -15,7 +15,7 @@
             "type": "command",
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/check_leakage.sh",
             "timeout": 60,
-            "statusMessage": "Re-running leakage tests..."
+            "statusMessage": "Re-running the test suite..."
           }
         ]
       }
