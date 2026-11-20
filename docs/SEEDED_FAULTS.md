@@ -176,3 +176,18 @@ FAILED tests/test_leakage.py::test_rolling_mean_excludes_today - assert np.fl...
 Caught by one test, checking one date (row 200, 2011-08-06), inside an
 `if all(...)` guard that would pass silently if that date's window were
 incomplete.
+
+**Fix** (commit after the fault). Restored `.shift(1)`: hook silent,
+`18 passed`. **Turns to fix:** 2 tool calls (restore, verify).
+
+The same commit strengthens `test_rolling_mean_excludes_today`: it now
+checks every row of `cnt_roll_7` and `cnt_roll_3` against the mean of the
+previous calendar days in the raw counts, and fails instead of skipping if
+a window is incomplete. On the fixed code: `19 passed`. Against the fault 2
+commit (temporary worktree):
+
+```
+AssertionError: 714 rows wrong, first: [(datetime.date(2011, 1, 10), 1340.0, np.float64(1344.0)), ...
+FAILED tests/test_leakage.py::test_rolling_mean_excludes_today[cnt_roll_7-7]
+1 failed, 18 passed
+```

@@ -60,14 +60,21 @@ def test_lag_is_not_the_target(feats):
     assert not (feats.cnt_lag_1 == feats[TARGET]).all()
 
 
-def test_rolling_mean_excludes_today(feats):
-    """cnt_roll_7 must be the mean of the 7 calendar days *before* today."""
-    by_date = feats.set_index("dteday")[TARGET]
-    date = feats.dteday.iloc[200]
-    window = [date - pd.Timedelta(days=k) for k in range(1, 8)]
-    if all(d in by_date.index for d in window):
-        expected = sum(by_date[d] for d in window) / 7
-        assert feats.set_index("dteday").cnt_roll_7[date] == pytest.approx(expected)
+@pytest.mark.parametrize("column, days", [("cnt_roll_7", 7), ("cnt_roll_3", 3)])
+def test_rolling_mean_excludes_today(feats, column, days):
+    """Every row's rolling mean must equal the mean of the `days` calendar
+    days *before* it, taken from the raw counts. Checks all rows, not one
+    date, and fails rather than skips if a window is incomplete."""
+    by_date = load_raw().set_index("dteday")[TARGET]
+    wrong = []
+    for date, value in feats.set_index("dteday")[column].items():
+        window = [date - pd.Timedelta(days=k) for k in range(1, days + 1)]
+        missing = [d for d in window if d not in by_date.index]
+        assert not missing, f"{column} on {date.date()}: window days {missing} absent"
+        expected = sum(by_date[d] for d in window) / days
+        if value != pytest.approx(expected):
+            wrong.append((date.date(), value, expected))
+    assert not wrong, f"{len(wrong)} rows wrong, first: {wrong[:3]}"
 
 
 def test_roll_3_is_mean_of_three_previous_days(feats):
