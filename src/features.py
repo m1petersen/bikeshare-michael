@@ -66,7 +66,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out["month_cos"] = np.cos(2 * np.pi * month / 12)
 
     # --- Weather: measured same-day, available to a forecaster ----------
-    out["weather_severity"] = encode_weather(out.weather)
+    out["weather_severity"] = out.weather.map({"GOOD": 0, "MISTY": 1})
 
     # --- Lagged target: past values only. shift(1) is the whole ballgame;
     # without it, cnt_roll_7 would contain today's count. -----------------

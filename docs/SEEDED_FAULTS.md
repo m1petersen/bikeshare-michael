@@ -58,3 +58,28 @@ future `src/` edit.
 
 **Turns to fix:** 6 tool calls (add test and import, run twice to read
 the failure, restore the call, verify).
+
+### B2. Silent weather map: plain `.map()` without `BAD`
+
+**Change** (`src/features.py`, `build_features`):
+
+```diff
+-    out["weather_severity"] = encode_weather(out.weather)
++    out["weather_severity"] = out.weather.map({"GOOD": 0, "MISTY": 1})
+```
+
+**Effect.** `BAD` maps to NaN, and the final `dropna()` deletes those rows
+without any message: 694 rows instead of 714, and all 20 BAD-weather days
+in the raw data are gone.
+
+**Tests.** Red in `make test`:
+
+```
+FAILED tests/test_contract.py::test_only_expected_rows_are_dropped
+AssertionError: lost 34 rows; expected at most 14
+1 failed, 16 passed
+```
+
+**Hook stderr:** none (exit 0). The hook runs only `tests/test_leakage.py`,
+and the row-loss test is in `tests/test_contract.py`, so the agent is not
+told at edit time; only a full `make test` shows it.
