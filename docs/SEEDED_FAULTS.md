@@ -139,3 +139,40 @@ The S3 classification test catches it independently of the FORBIDDEN check.
 **Fix** (commit after the fault). Removed `+ ["casual"]`. The hook was
 silent on the edit (exit 0); `make test`: `18 passed`.
 **Turns to fix:** 2 tool calls (revert the line, verify).
+
+### Fault 2. `.shift(1)` removed from `cnt_roll_7`
+
+**Change** (`src/features.py`, `build_features`):
+
+```diff
+-    out["cnt_roll_7"] = out[TARGET].shift(1).rolling(LAG_WARMUP).mean()
++    out["cnt_roll_7"] = out[TARGET].rolling(LAG_WARMUP).mean()
+```
+
+**Effect.** `cnt_roll_7` on day *d* now includes day *d*'s own count: the
+target leaks into a feature. Row count is unchanged (714), so the row-loss
+test cannot see it.
+
+**Tests.** Red in `make test`:
+
+```
+FAILED tests/test_leakage.py::test_rolling_mean_excludes_today - assert np.fl...
+1 failed, 17 passed
+```
+
+**Hook stderr** (exit 2, returned straight after the Edit; trimmed):
+
+```
+Tests failed after editing .../src/features.py:
+>           assert feats.set_index("dteday").cnt_roll_7[date] == pytest.approx(expected)
+E           assert np.float64(4389.0) == 4414.857142857143 ± 0.00441486
+E             Obtained: 4389.0
+E             Expected: 4414.857142857143 ± 0.00441486
+tests/test_leakage.py:70: AssertionError
+FAILED tests/test_leakage.py::test_rolling_mean_excludes_today - assert np.fl...
+1 failed, 17 passed in 1.65s
+```
+
+Caught by one test, checking one date (row 200, 2011-08-06), inside an
+`if all(...)` guard that would pass silently if that date's window were
+incomplete.
