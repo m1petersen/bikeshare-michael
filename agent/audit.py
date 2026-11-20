@@ -106,6 +106,12 @@ Check exactly four things:
 Verify by reading files and running code. Do not accept a docstring or a
 README claim as evidence.
 
+Never score a held-out test set: an audit must not be the reason a test
+set was consulted. To check that the pipeline runs, use a validation-only
+command if the repo documents one (for example `make train-valid`), the
+feature stage, and the test suite. Commands that train and score on the
+test split are blocked.
+
 Your final answer is a single JSON object matching the schema you were
 given. No prose around it.
 """
@@ -156,6 +162,15 @@ async def audit_repo(repo: Path) -> dict[str, Any]:
         # allowed_tools is the boundary. Anything not listed is denied
         # automatically in a headless run, so the auditor can read and run
         # but has no Edit or Write to grant.
+        # The full pipeline scores the test split; an audit must not be the
+        # reason a test set was consulted. Deny rules beat the Bash allow.
+        disallowed_tools=[
+            "Bash(make all:*)",
+            "Bash(make train)",
+            "Bash(make)",
+            "Bash(python -m src.train)",
+            "Bash(.venv/bin/python -m src.train)",
+        ],
         permission_mode="default",
         max_turns=40,
         model=os.environ.get("AUDIT_MODEL", "bikeshare-coder"),
