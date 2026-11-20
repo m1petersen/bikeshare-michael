@@ -43,6 +43,44 @@ def test_lags_are_true_calendar_lags(feats):
     assert checked > 600, "too few rows actually verified"
 
 
+def test_lag_7_is_true_calendar_lag(feats):
+    """cnt_lag_7 on every row must equal the raw cnt exactly 7 calendar days
+    earlier. A row-based shift that is off by one (shift(6)) passes the
+    lag-1 test; this catches it."""
+    by_date = load_raw().set_index("dteday")[TARGET]
+    wrong = [
+        (d.date(), lag, by_date.get(d - pd.Timedelta(days=7)))
+        for d, lag in feats.set_index("dteday").cnt_lag_7.items()
+        if d - pd.Timedelta(days=7) not in by_date.index
+        or lag != by_date[d - pd.Timedelta(days=7)]
+    ]
+    assert not wrong, f"{len(wrong)} rows wrong, first: {wrong[:3]}"
+
+
+def test_no_feature_restates_the_target(feats):
+    """No feature may be a copy or close restatement of casual, registered or
+    cnt. feature_columns() only excludes FORBIDDEN by name, so a renamed copy
+    (e.g. reg_copy = registered * 1.0) gets through it. Two checks:
+    |corr| > 0.98 with any of them (the honest maximum is ~0.85, cnt_roll_7
+    vs cnt), and ridge on validation scoring R^2 > 0.95 (honest: ~0.64)."""
+    from sklearn.base import clone
+    from sklearn.metrics import r2_score
+
+    from src.train import MODELS, temporal_split
+
+    cols = feature_columns(feats)
+    corr = feats[cols].corrwith(feats["casual"]).abs().to_frame("casual")
+    corr["registered"] = feats[cols].corrwith(feats["registered"]).abs()
+    corr[TARGET] = feats[cols].corrwith(feats[TARGET]).abs()
+    too_close = corr[(corr > 0.98).any(axis=1)]
+    assert too_close.empty, f"features near-identical to the target: {too_close.round(3).to_dict('index')}"
+
+    train, valid, _ = temporal_split(feats)
+    ridge = clone(MODELS["ridge"]).fit(train[cols], train[TARGET])
+    r2 = r2_score(valid[TARGET], ridge.predict(valid[cols]))
+    assert r2 <= 0.95, f"ridge validation R^2 {r2:.4f} > 0.95: a feature restates the target"
+
+
 def test_every_row_has_a_complete_lag_window(feats):
     """Each surviving row needs all LAG_WARMUP previous calendar days in the
     raw data. test_lags_are_true_calendar_lags skips dates whose previous day
