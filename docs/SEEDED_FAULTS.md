@@ -97,3 +97,41 @@ Tests failed after editing src/features.py:
 FAILED tests/test_contract.py::test_only_expected_rows_are_dropped - Assertio...
 1 failed, 16 passed
 ```
+
+## Exercise 2 faults
+
+From here on the hook runs the whole suite (changed in the B2 fix).
+
+### Fault 1. Forbidden column added to `feature_columns`
+
+**Change** (`src/features.py`, `feature_columns`):
+
+```diff
+-    return [c for c in numeric if c not in FORBIDDEN]
++    return [c for c in numeric if c not in FORBIDDEN] + ["casual"]
+```
+
+**Tests.** Red in `make test`:
+
+```
+AssertionError: unexpected raw features: {'casual'}
+AssertionError: forbidden columns in feature set: {'casual'}
+FAILED tests/test_contract.py::test_raw_features_are_only_the_classified_ones
+FAILED tests/test_leakage.py::test_no_forbidden_features - AssertionError: fo...
+2 failed, 16 passed
+```
+
+**Hook stderr** (exit 2, returned to the agent straight after the Edit;
+trimmed to the lines that matter):
+
+```
+Tests failed after editing .../src/features.py:
+>       assert not (cols & FORBIDDEN), f"forbidden columns in feature set: {cols & FORBIDDEN}"
+E       AssertionError: forbidden columns in feature set: {'casual'}
+tests/test_leakage.py:31: AssertionError
+FAILED tests/test_contract.py::test_raw_features_are_only_the_classified_ones
+FAILED tests/test_leakage.py::test_no_forbidden_features - AssertionError: fo...
+2 failed, 16 passed in 1.85s
+```
+
+The S3 classification test catches it independently of the FORBIDDEN check.
