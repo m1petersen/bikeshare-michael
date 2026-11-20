@@ -7,6 +7,19 @@
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_raw.sh",
+            "timeout": 10,
+            "statusMessage": "Checking for writes to data/raw..."
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -32,6 +45,8 @@
     "deny": [
       "Write(./data/raw/**)",
       "Edit(./data/raw/**)",
+      "Bash(cp * data/raw/*)",
+      "Bash(mv * data/raw/*)",
       "Bash(rm -rf:*)"
     ]
   }

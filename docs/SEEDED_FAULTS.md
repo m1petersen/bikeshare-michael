@@ -251,3 +251,51 @@ untouched (sha256 `a6bed1577f6e4de5...` for both files).
 `python -c` that writes a file) or any edit outside Claude Code changes
 `data/raw/` without the hook or the tests seeing it. No test checks what is
 in `data/raw/` or that `bike_daily.csv` still has its original hash.
+
+**Fix** (commit after the fault), in three layers:
+
+1. **Detect (tests).** `tests/test_contract.py` gains
+   `test_raw_file_is_unchanged` (sha256 of `bike_daily.csv` must equal
+   `RAW_SHA256` in `src/config.py`) and `test_raw_folder_holds_only_the_raw_file`
+   (nothing but `bike_daily.csv` in `data/raw/`; `.DS_Store` excepted).
+   Against the fault:
+
+   ```
+   AssertionError: unexpected files in data/raw/: ['bike_daily_extra.csv']
+   FAILED tests/test_contract.py::test_raw_folder_holds_only_the_raw_file - Asse...
+   1 failed, 21 passed
+   ```
+
+   These catch the fault however it got there (agent, Bash, a person's
+   terminal), and the PostToolUse hook runs them on the next `src/` edit.
+2. **Prevent (PreToolUse hook).** `.claude/hooks/protect_raw.sh`, registered
+   for `Bash`, cancels a command before it runs (exit 2) if it writes into
+   `data/raw/`: `cp`/`mv`/`rm`/`touch`/`tee`/... with a `data/raw` path,
+   `sed -i`/`perl -i`, `>`/`>>` redirects, and `git rm/mv/checkout/restore`.
+   Checked offline on 9 write commands (8 blocked) and 7 read commands (6
+   allowed), then live in this session:
+
+   ```
+   PreToolUse:Bash hook error: Blocked: this command would write to data/raw/, which is immutable.
+     true || cp /dev/null data/raw/probe.csv
+   ```
+
+   Known gaps, found while testing it:
+   - `cd data && touch raw/x` gets through: the path never says `data/raw`.
+     So would a write through `python -c`.
+   - `cp data/raw/... /tmp/` (a harmless copy out) is blocked. Left that way
+     as the cautious choice.
+   - It matches the command text, not what the command does. It blocked the
+     agent's own `cat >> docs/SEEDED_FAULTS.md <<EOF` because the heredoc
+     *quoted* a `cp ... data/raw/...` line. These docs were then written
+     with the Edit tool instead.
+
+   The tests are the backstop for whatever the pattern misses.
+3. **Deny rules.** `Bash(cp * data/raw/*)` and `Bash(mv * data/raw/*)` added
+   next to the existing `Write`/`Edit` denies in `.claude/settings.json`.
+
+Removed `data/raw/bike_daily_extra.csv` with `git rm` before registering
+the hook, which would block that command too. `make test`: `22 passed`.
+**Turns to fix:** 10 tool calls (tests and red run, `.DS_Store` exception,
+write and check the hook, remove the file, register hook and deny rules,
+verify), plus one live probe of the hook.

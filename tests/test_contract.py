@@ -1,12 +1,29 @@
 """Guard rails on the ingest contract and the trained model's behaviour."""
+import hashlib
+
 import pandas as pd
 import pytest
 from sklearn.metrics import r2_score
 
-from src.config import COLUMN_GROUPS, LAG_WARMUP, RAW, RAW_FEATURE_COLS, TARGET
+from src.config import COLUMN_GROUPS, LAG_WARMUP, RAW, RAW_FEATURE_COLS, RAW_SHA256, TARGET
 from src.features import build_features, feature_columns, reindex_to_calendar
 from src.ingest import load_raw
 from src.train import MODELS, temporal_split
+
+
+def test_raw_file_is_unchanged():
+    """data/raw/bike_daily.csv is immutable; its hash must match the one
+    recorded in src/config.py."""
+    assert hashlib.sha256(RAW.read_bytes()).hexdigest() == RAW_SHA256
+
+
+def test_raw_folder_holds_only_the_raw_file():
+    """Nothing else may appear in data/raw/: a stray copy there is unreviewed
+    data one path change away from being loaded. `.DS_Store` (macOS Finder
+    metadata) is the one exception."""
+    allowed = {RAW.name, ".DS_Store"}
+    extra = sorted(p.name for p in RAW.parent.iterdir() if p.name not in allowed)
+    assert not extra, f"unexpected files in data/raw/: {extra}"
 
 
 def column_problems(columns) -> list[str]:

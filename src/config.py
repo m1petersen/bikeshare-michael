@@ -3,6 +3,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw" / "bike_daily.csv"
+# The checked-in raw file must never change, and must be alone in data/raw/.
+# tests/test_contract.py checks both, which catches writes the Edit/Write
+# hook cannot see (a Bash `cp`, or an edit outside Claude Code).
+RAW_SHA256 = "a6bed1577f6e4de56dcfae6d8315985073cc0ad3446c8c99ed60c86a0b5ad9dc"
 PROCESSED = ROOT / "data" / "processed" / "features.parquet"
 METRICS = ROOT / "reports" / "metrics.json"
 # Written by `make train-valid`: validation scores only, for iterating
