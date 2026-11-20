@@ -22,7 +22,7 @@ needed. Nothing leaves your laptop.
     make model          # pulls the base model, builds `bikeshare-coder` with a 64k context
     make check-model    # confirms Claude Code can reach it and that tool calls work
     make all            # data -> features -> train, writes reports/metrics.json
-    make test           # 14 tests
+    make test           # 24 tests
 
     # 4. Start the agent, from the repo root
     claude

@@ -1,23 +1,27 @@
 .PHONY: all data features train train-valid test clean model check-model
 
 # --- The pipeline ----------------------------------------------------------
+# Use the project venv when it exists, so results do not depend on whether
+# it was activated (the system sklearn gives different scores).
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
+
 all: data features train
 
 data:
-	python -m src.ingest
+	$(PYTHON) -m src.ingest
 
 features:
-	python -m src.features
+	$(PYTHON) -m src.features
 
 train:
-	python -m src.train
+	$(PYTHON) -m src.train
 
 # Validation scores only; use while iterating so the test set stays unseen.
 train-valid:
-	python -m src.train --valid-only
+	$(PYTHON) -m src.train --valid-only
 
 test:
-	python -m pytest tests/ -q
+	$(PYTHON) -m pytest tests/ -q
 
 clean:
 	rm -f data/processed/*.parquet reports/metrics.json reports/metrics_valid.json reports/*.png
