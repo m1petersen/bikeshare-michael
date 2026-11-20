@@ -191,3 +191,25 @@ AssertionError: 714 rows wrong, first: [(datetime.date(2011, 1, 10), 1340.0, np.
 FAILED tests/test_leakage.py::test_rolling_mean_excludes_today[cnt_roll_7-7]
 1 failed, 18 passed
 ```
+
+### Fault 3. `raise` removed from `encode_weather`
+
+**Change** (`src/features.py`, `encode_weather`):
+
+```diff
+-    known = series.dropna()
+-    unknown = set(known.unique()) - set(WEATHER_ORDER)
+-    if unknown:
+-        raise ValueError(f"unmapped weather labels: {sorted(unknown)}")
+     return series.map(WEATHER_ORDER).astype(float)
+```
+
+**Effect.** An unknown label becomes NaN with no error:
+`encode_weather(pd.Series(["GOOD", "STORMY"]))` returns `[0.0, nan]`.
+
+**Tests.** Green: `19 passed`. **Hook stderr:** none (exit 0).
+
+**Why nothing caught it.** Every label in the current raw file is mapped,
+so removing the guard changes no output today. The row-loss test would
+catch the consequence if an unknown label ever arrived (as B2 showed), but
+no test exercises the encoder's own contract: "unknown label -> ValueError".
