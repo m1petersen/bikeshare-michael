@@ -6,7 +6,9 @@ rides) from calendar, weather, and lagged-demand features.
 ## Commands
 - `make data` - download raw CSV and assert its shape
 - `make features` - build `data/processed/features.parquet`
-- `make train` - fit models, write `reports/metrics.json`
+- `make train` - fit models, write `reports/metrics.json` (scores TEST)
+- `make train-valid` - validation only, `reports/metrics_valid.json`.
+  Use this while iterating; `make train`/`make all` run once, at the end.
 - `make test` - pytest; run this before claiming anything works
 - `make all` - the three pipeline stages in order
 

@@ -1,4 +1,4 @@
-.PHONY: all data features train test clean model check-model
+.PHONY: all data features train train-valid test clean model check-model
 
 # --- The pipeline ----------------------------------------------------------
 all: data features train
@@ -12,11 +12,15 @@ features:
 train:
 	python -m src.train
 
+# Validation scores only; use while iterating so the test set stays unseen.
+train-valid:
+	python -m src.train --valid-only
+
 test:
 	python -m pytest tests/ -q
 
 clean:
-	rm -f data/processed/*.parquet reports/metrics.json reports/*.png
+	rm -f data/processed/*.parquet reports/metrics.json reports/metrics_valid.json reports/*.png
 
 # --- The agent model (open weights, local) ----------------------------------
 # Builds `bikeshare-coder`: the base model plus a 64k context window, which

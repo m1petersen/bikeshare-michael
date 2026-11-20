@@ -13,9 +13,11 @@ lagged demand, so if it cannot beat "yesterday again" it has learned
 nothing worth reporting. The booster is there because it fails, and the
 reason it fails is the headline result.
 
-Run: python -m src.train
+Run: python -m src.train               (valid + test -> reports/metrics.json)
+     python -m src.train --valid-only  (valid only -> reports/metrics_valid.json)
 """
 import json
+import sys
 
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
@@ -26,7 +28,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.config import METRICS, PROCESSED, TARGET, TRAIN_END, VALID_END
+from src.config import METRICS, METRICS_VALID, PROCESSED, TARGET, TRAIN_END, VALID_END
 from src.features import feature_columns
 
 
@@ -62,18 +64,26 @@ def temporal_split(df: pd.DataFrame):
     return train, valid, test
 
 
-def fit_and_score() -> dict:
+def fit_and_score(include_test: bool = True) -> dict:
+    """Fit every model on train and score it.
+
+    include_test=False scores validation only and never evaluates a model
+    on the test rows: use it while iterating, so the test set is consulted
+    once, by the final `make all`.
+    """
     df = pd.read_parquet(PROCESSED)
     cols = feature_columns(df)
     train, valid, test = temporal_split(df)
+    parts = [("valid", valid)] + ([("test", test)] if include_test else [])
 
     results = {
         "n_features": len(cols),
         "features": cols,
         "n_train": len(train),
         "n_valid": len(valid),
-        "n_test": len(test),
     }
+    if include_test:
+        results["n_test"] = len(test)
     for name, model in MODELS.items():
         model.fit(train[cols], train[TARGET])
         results[name] = {
@@ -81,13 +91,15 @@ def fit_and_score() -> dict:
                 "r2": round(float(r2_score(part[TARGET], model.predict(part[cols]))), 4),
                 "mae": round(float(mean_absolute_error(part[TARGET], model.predict(part[cols]))), 1),
             }
-            for split, part in [("valid", valid), ("test", test)]
+            for split, part in parts
         }
     return results
 
 
 if __name__ == "__main__":
-    res = fit_and_score()
-    METRICS.parent.mkdir(parents=True, exist_ok=True)
-    METRICS.write_text(json.dumps(res, indent=2))
+    valid_only = "--valid-only" in sys.argv[1:]
+    res = fit_and_score(include_test=not valid_only)
+    out = METRICS_VALID if valid_only else METRICS
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(res, indent=2))
     print(json.dumps({k: v for k, v in res.items() if k != "features"}, indent=2))

@@ -44,12 +44,15 @@ def test_only_expected_rows_are_dropped(raw, feats):
 
 
 def test_beats_the_mean_baseline(feats):
-    """A model that cannot beat predicting the training mean is not a result."""
+    """A model that cannot beat predicting the training mean is not a result.
+
+    Scored on validation, not test: `make test` runs on every edit, and a
+    test-set check here would consult the test set hundreds of times."""
     cols = feature_columns(feats)
-    train, _, test = temporal_split(feats)
+    train, valid, _ = temporal_split(feats)
     ridge = MODELS["ridge"]
     ridge.fit(train[cols], train[TARGET])
-    assert r2_score(test[TARGET], ridge.predict(test[cols])) > 0.4
+    assert r2_score(valid[TARGET], ridge.predict(valid[cols])) > 0.4
 
 
 def test_persistence_baseline_is_reported():

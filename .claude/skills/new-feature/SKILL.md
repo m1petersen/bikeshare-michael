@@ -26,9 +26,10 @@ Work in this order. Do not skip step 2.
    `.rolling()`. If the feature needs more than 7 days of history, raise
    `LAG_WARMUP` in `src/config.py` so the row-loss test stays honest.
 
-4. **Verify.** Run `make features && make test && make train`. Report the
-   before/after validation R^2 for ridge and hgb from
-   `reports/metrics.json`. Do not report test-set numbers while iterating.
+4. **Verify.** Run `make features && make test && make train-valid`. Report
+   the before/after validation R^2 for ridge and hgb from
+   `reports/metrics_valid.json`. Never run `make train` or `make all` here:
+   they score the test set, which is consulted once, at the very end.
 
 5. **Record the decision** as one line in `docs/DECISIONS.md`: what you
    added, the availability argument, and the validation delta.
