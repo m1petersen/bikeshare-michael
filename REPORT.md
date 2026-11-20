@@ -3,25 +3,37 @@
 Forecasting daily Capital Bikeshare rides (`cnt`), 2011-2012. Train on
 2011 (348 days), validate on H1 2012 (182), test on H2 2012 (184). All
 numbers below come from `reports/metrics.json`, written by one `make all`
-at commit `02a3192` (`make all` reproduces it: fixed seeds, pinned venv).
+at commit `02a3192`, and re-scored once at `5863a67` to add the
+without-`cnt_roll_3` rows (`make all` reproduces it: fixed seeds, pinned venv).
 Features: 15, listed in `metrics.json`, including the Exercise 1 feature
 `cnt_roll_3`.
 
 ## Results
 
-| Model | Split | R^2 | MAE (rides/day) |
-|---|---|---|---|
-| baseline_mean | valid | -0.9318 | 2002.2 |
-| baseline_mean | test | -2.1441 | 2847.7 |
-| baseline_persistence | valid | 0.4507 | 900.6 |
-| baseline_persistence | test | 0.5099 | 840.1 |
-| ridge | valid | 0.6439 | 836.5 |
-| ridge | test | 0.58 | 946.2 |
-| hgb | valid | 0.1983 | 1311.6 |
-| hgb | test | -0.5338 | 1998.7 |
+The four starter models, without and with the Exercise 1 feature
+`cnt_roll_3`. MAE is in rides/day. "Without" rows are
+`without_cnt_roll_3` in `metrics.json`; "with" rows are its top-level
+model entries.
 
+| Model | `cnt_roll_3` | valid R^2 | valid MAE | test R^2 | test MAE |
+|---|---|---|---|---|---|
+| baseline_mean | without | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
+| baseline_mean | with | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
+| baseline_persistence | without | 0.4507 | 900.6 | 0.5099 | 840.1 |
+| baseline_persistence | with | 0.4507 | 900.6 | 0.5099 | 840.1 |
+| ridge | without | 0.6475 | 832.9 | 0.5833 | 947.1 |
+| ridge | with | 0.6439 | 836.5 | 0.58 | 946.2 |
+| hgb | without | 0.2185 | 1296.6 | -0.4975 | 1972.6 |
+| hgb | with | 0.1983 | 1311.6 | -0.5338 | 1998.7 |
+
+The baselines don't use `cnt_roll_3`, so their two rows are identical.
 Exercise 4's `hgb_log_ratio` is reported in its own section, so this table
 compares the four models in the starter.
+
+The "without" rows were added by a re-score of the test set, recorded in
+`docs/DECISIONS.md` before it ran. It only added these required rows.
+Every number from the first final run came out identical, and no choice
+changed.
 
 **When the test set was seen.** The test set was scored once for these
 results, after all feature, fault and audit work
@@ -38,7 +50,9 @@ model.
 fell for both models: ridge 0.6475 -> 0.6439 (-0.0036, noise), and hgb
 0.2185 -> 0.1983 (-0.0202). It mostly repeats `cnt_lag_1` and
 `cnt_roll_7`. It stays in the feature set because the exercise requires
-one; we would drop it otherwise.
+one; we would drop it otherwise. On test it is also slightly worse: ridge
+0.5833 -> 0.58, hgb -0.4975 -> -0.5338. That confirms the validation
+result; it was not used to decide anything.
 
 **Caveat on every score.** Same-day weather (`temp`, `atemp`, `hum`,
 `windspeed`, `weather_severity`) is a feature. It is known on the day but
