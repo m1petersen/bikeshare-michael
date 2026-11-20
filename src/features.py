@@ -51,7 +51,7 @@ def reindex_to_calendar(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    out = reindex_to_calendar(df.sort_values("dteday").reset_index(drop=True)).copy()
+    out = df.sort_values("dteday").reset_index(drop=True).copy()
 
     # --- Calendar: known in advance, so it cannot leak -------------------
     out["dayofweek"] = out.dteday.dt.dayofweek
