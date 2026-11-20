@@ -38,3 +38,23 @@ row. `cnt_lag_7` has no test, and `test_rolling_mean_excludes_today`
 checks one date (row 200) far from the gap. `test_calendar_is_complete_before_lagging`
 tests `reindex_to_calendar` itself, not that `build_features` calls it.
 The row-loss test sets an upper bound only, and losing fewer rows passes it.
+
+**Fix** (commit after the bug). Added `test_every_row_has_a_complete_lag_window`
+to `tests/test_leakage.py`: every surviving row must have all `LAG_WARMUP`
+previous calendar days in the raw data. Run against the bug, it goes red
+(output trimmed; pytest prints the dates as `datetime.date(2011, 3, 11)`):
+
+```
+FAILED tests/test_leakage.py::test_every_row_has_a_complete_lag_window
+AssertionError: rows with an incomplete lag window: [2011-03-11, 2011-03-12,
+2011-03-13, 2011-03-14, 2011-03-15, 2011-03-16, 2011-03-17]
+1 failed, 16 passed
+```
+
+Then restored the `reindex_to_calendar` call: `17 passed`, 714 rows. The
+hook stayed silent on the restoring edit (tests green). Because the new
+test is in `tests/test_leakage.py`, the hook now catches this bug on any
+future `src/` edit.
+
+**Turns to fix:** 6 tool calls (add test and import, run twice to read
+the failure, restore the call, verify).

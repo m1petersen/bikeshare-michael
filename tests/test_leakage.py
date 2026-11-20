@@ -7,7 +7,7 @@ scores R^2 = 1.0 and looks brilliant while having learned nothing.
 import pandas as pd
 import pytest
 
-from src.config import FORBIDDEN, TARGET
+from src.config import FORBIDDEN, LAG_WARMUP, TARGET
 from src.features import build_features, feature_columns
 from src.ingest import load_raw
 
@@ -41,6 +41,19 @@ def test_lags_are_true_calendar_lags(feats):
             assert lag == pytest.approx(by_date[prev]), f"bad lag at {date.date()}"
             checked += 1
     assert checked > 600, "too few rows actually verified"
+
+
+def test_every_row_has_a_complete_lag_window(feats):
+    """Each surviving row needs all LAG_WARMUP previous calendar days in the
+    raw data. test_lags_are_true_calendar_lags skips dates whose previous day
+    is missing, so a row-based shift across the 2011-03-10 gap passes it;
+    this catches the rows it skips."""
+    present = set(load_raw().dteday)
+    broken = [
+        d.date() for d in feats.dteday
+        if any(d - pd.Timedelta(days=k) not in present for k in range(1, LAG_WARMUP + 1))
+    ]
+    assert not broken, f"rows with an incomplete lag window: {broken}"
 
 
 def test_lag_is_not_the_target(feats):
