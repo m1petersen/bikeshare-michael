@@ -3,10 +3,29 @@ import pandas as pd
 import pytest
 from sklearn.metrics import r2_score
 
-from src.config import LAG_WARMUP, TARGET
+from src.config import COLUMN_GROUPS, LAG_WARMUP, RAW, RAW_FEATURE_COLS, TARGET
 from src.features import build_features, feature_columns, reindex_to_calendar
 from src.ingest import load_raw
 from src.train import MODELS, temporal_split
+
+
+def column_problems(columns) -> list[str]:
+    """Raw columns in no group, or in more than one."""
+    problems = []
+    for col in columns:
+        groups = [name for name, cols in COLUMN_GROUPS.items() if col in cols]
+        if len(groups) != 1:
+            problems.append(f"{col}: {groups or 'unclassified'}")
+    return problems
+
+
+def test_every_raw_column_is_classified():
+    """Each column in data/raw/bike_daily.csv must be in exactly one group in
+    src/config.py. An unclassified numeric column would otherwise pass through
+    feature_columns() into the model without anyone deciding it should."""
+    header = pd.read_csv(RAW, nrows=0).columns
+    problems = column_problems(header)
+    assert not problems, f"classify these in src/config.py: {problems}"
 
 
 @pytest.fixture(scope="module")
@@ -41,6 +60,12 @@ def test_only_expected_rows_are_dropped(raw, feats):
     allowed_loss = LAG_WARMUP + LAG_WARMUP * missing_days
     lost = len(raw) - len(feats)
     assert lost <= allowed_loss, f"lost {lost} rows; expected at most {allowed_loss}"
+
+
+def test_raw_features_are_only_the_classified_ones(raw, feats):
+    """Every raw column that reaches the model is one we chose to use as-is."""
+    used_raw = set(feature_columns(feats)) & set(raw.columns)
+    assert used_raw == RAW_FEATURE_COLS, f"unexpected raw features: {used_raw ^ RAW_FEATURE_COLS}"
 
 
 def test_beats_the_mean_baseline(feats):
