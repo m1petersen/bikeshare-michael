@@ -213,3 +213,16 @@ FAILED tests/test_leakage.py::test_rolling_mean_excludes_today[cnt_roll_7-7]
 so removing the guard changes no output today. The row-loss test would
 catch the consequence if an unknown label ever arrived (as B2 showed), but
 no test exercises the encoder's own contract: "unknown label -> ValueError".
+
+**Fix** (commit after the fault). Added `test_encode_weather_rejects_unknown_labels`
+to `tests/test_leakage.py` (so the hook runs it), which calls the encoder
+with `["GOOD", "STORMY"]` and expects `ValueError`. Against the fault:
+
+```
+E       Failed: DID NOT RAISE ValueError
+FAILED tests/test_leakage.py::test_encode_weather_rejects_unknown_labels - Fa...
+1 failed, 19 passed
+```
+
+Then restored the guard: hook silent, `20 passed`.
+**Turns to fix:** 3 tool calls (add test and run it red, restore the guard, verify).
