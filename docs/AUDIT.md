@@ -79,7 +79,7 @@ to have been used deliberately.
 
 Finding 2 is a reporting gap, fixed by editing one line. **Recommended to
 the teammate:** the Finding 1 fix (we made the same change in our repo, at
-commit `168b628`), and a DECISIONS line saying the test split was scored
+commit `55d711a`), and a DECISIONS line saying the test split was scored
 during iteration. We opened no PR and changed nothing in their repo.
 
 ---
