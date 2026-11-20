@@ -6,6 +6,7 @@ Two baselines and two models, on purpose.
   baseline_persistence  predict yesterday's count (cnt_lag_1)
   ridge                 standardised linear model on the audited features
   hgb                   gradient-boosted trees on the same features
+  hgb_log_ratio         the same trees, fit on log(cnt / cnt_roll_7) (Exercise 4)
 
 The mean baseline shows what "the distribution moved" costs. Persistence
 is the baseline that actually matters: ridge's features are dominated by
@@ -19,8 +20,9 @@ Run: python -m src.train               (valid + test -> reports/metrics.json)
 import json
 import sys
 
+import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import Ridge
@@ -47,11 +49,41 @@ class PersistenceBaseline(BaseEstimator, RegressorMixin):
         return X[self.column].to_numpy(dtype=float)
 
 
+class LogRatioTarget(BaseEstimator, RegressorMixin):
+    """Fit `estimator` on log(y / X[reference]) and predict
+    X[reference] * exp(prediction).
+
+    Exercise 4. A tree predicts within the range of its training targets, and
+    71 of the 182 validation days exceed the 2011 maximum (6,043), so `hgb`
+    on raw counts cannot reach them. The ratio of today to the past week's
+    mean has no such ceiling. `reference` must be a lagged feature (known
+    before the day), and must be positive.
+    """
+
+    def __init__(self, estimator=None, reference: str = "cnt_roll_7"):
+        self.estimator = estimator
+        self.reference = reference
+
+    def fit(self, X, y):
+        ref = X[self.reference].to_numpy(dtype=float)
+        if (ref <= 0).any():
+            raise ValueError(f"{self.reference} must be positive for a log ratio")
+        self.estimator_ = clone(self.estimator).fit(X, np.log(np.asarray(y, dtype=float) / ref))
+        return self
+
+    def predict(self, X):
+        return X[self.reference].to_numpy(dtype=float) * np.exp(self.estimator_.predict(X))
+
+
 MODELS = {
     "baseline_mean": DummyRegressor(strategy="mean"),
     "baseline_persistence": PersistenceBaseline("cnt_lag_1"),
     "ridge": make_pipeline(StandardScaler(), Ridge(alpha=1.0)),
     "hgb": HistGradientBoostingRegressor(random_state=0, max_iter=300),
+    # Exercise 4: same booster, target log(cnt / cnt_roll_7).
+    "hgb_log_ratio": LogRatioTarget(
+        HistGradientBoostingRegressor(random_state=0, max_iter=300), "cnt_roll_7"
+    ),
 }
 
 

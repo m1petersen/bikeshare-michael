@@ -101,3 +101,28 @@ def test_persistence_baseline_is_reported():
     """The baseline that matters for a lag-driven model is 'yesterday again'.
     It must be in the comparison, whatever its score."""
     assert "baseline_persistence" in MODELS
+
+
+def test_log_ratio_reference_is_a_safe_lag(feats):
+    """The Exercise 4 model rescales by its reference column at prediction
+    time, so that column must be a model feature (not FORBIDDEN) and one of
+    the lagged features whose shift(1) is tested in tests/test_leakage.py."""
+    ref = MODELS["hgb_log_ratio"].reference
+    assert ref in feature_columns(feats)
+    assert ref in {"cnt_lag_1", "cnt_lag_7", "cnt_roll_7", "cnt_roll_3"}
+
+
+def test_log_ratio_inverts_exactly(feats):
+    """With an inner model that always predicts log-ratio 0, the wrapper must
+    return the reference column unchanged, using only the feature columns."""
+    from sklearn.base import clone
+    from sklearn.dummy import DummyRegressor
+
+    cols = feature_columns(feats)
+    train, valid, _ = temporal_split(feats)
+    model = clone(MODELS["hgb_log_ratio"]).set_params(
+        estimator=DummyRegressor(strategy="constant", constant=0.0)
+    )
+    model.fit(train[cols], train[TARGET])
+    ref = model.reference
+    assert model.predict(valid[cols]) == pytest.approx(valid[ref].to_numpy())
