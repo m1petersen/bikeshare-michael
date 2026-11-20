@@ -226,3 +226,28 @@ FAILED tests/test_leakage.py::test_encode_weather_rejects_unknown_labels - Fa...
 
 Then restored the guard: hook silent, `20 passed`.
 **Turns to fix:** 3 tool calls (add test and run it red, restore the guard, verify).
+
+### Fault 4. `cp` into `data/raw/` from Bash (invisible to the hook)
+
+**Change.** A new file in the immutable raw-data folder, made with a shell
+command instead of the Edit/Write tools:
+
+```
+cp data/raw/bike_daily.csv data/raw/bike_daily_extra.csv
+```
+
+When the agent tried this through its Bash tool, Claude Code's session
+permission check blocked it. That was the user's permission layer, not the
+repo's: `.claude/settings.json` only denies `Write`/`Edit` on `data/raw/**`.
+Michael then ran the same command in his own terminal. The original file is
+untouched (sha256 `a6bed1577f6e4de5...` for both files).
+
+**Tests.** Green: `20 passed`. **Hook stderr:** none; the hook never ran.
+**Turns to fix:** see the fix below.
+
+**Why nothing caught it.** The PostToolUse hook is registered for
+`Edit|Write` only, and the deny rules cover only `Write(./data/raw/**)` and
+`Edit(./data/raw/**)`. Any Bash command (`cp`, `mv`, `>`, `sed -i`, a
+`python -c` that writes a file) or any edit outside Claude Code changes
+`data/raw/` without the hook or the tests seeing it. No test checks what is
+in `data/raw/` or that `bike_daily.csv` still has its original hash.
